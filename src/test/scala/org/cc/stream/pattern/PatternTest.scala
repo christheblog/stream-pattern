@@ -23,9 +23,12 @@ class PatternTest extends FlatSpec {
     checkAll("ABC") { input => assert(ss('A','B','C') === matching(p)(input)) }
   }
 
-  "A pattern" should "be matched several times if it appears several times" in {
-    val p = elt('A') ~> elt('B') ~> elt('C')
-    checkAll("ABCABC") { input => assert(ss('A','B','C') ++ ss('A','B','C') === matching(p)(input)) }
+  "any()" should "match any element" in {
+    val p = elt('A') ~> any ~> elt('C')
+    checkAll("ABC") { input => assert(ss('A','B','C')=== matching(p)(input)) }
+    checkAll("AXC") { input => assert(ss('A','X','C')=== matching(p)(input)) }
+    checkAll("AYC") { input => assert(ss('A','Y','C')=== matching(p)(input)) }
+    checkAll("AZC") { input => assert(ss('A','Z','C')=== matching(p)(input)) }
   }
 
   "or() combinator" should "match either the first part or the second part of the 'or'." in {
@@ -83,28 +86,41 @@ class PatternTest extends FlatSpec {
   }
 
   "Nested patterns" should "be supported" in {
-    val p = elt('A') ~> many(elt('A') ~> ('B')) ~> elt('C')
+    val p = elt('A') ~> many(elt('A') ~> elt('B')) ~> elt('C')
     // Matching
-    assert(ss('A','C') === matching(p)("AC".toStream))
-    assert(ss('A','A','B','C') === matching(p)("AABC".toStream))
-    assert(ss('A','A','B','A','B','C') === matching(p)("AABABC".toStream))
-    assert(ss('A','A','B','A','B','A','B','C') === matching(p)("AABABABC".toStream))
+    checkAll("AC") { input => assert(ss('A','C') === matching(p)(input)) }
+    checkAll("AABC") { input => assert(ss('A','A','B','C') === matching(p)(input)) }
+    checkAll("AABABC") { input => assert(ss('A','A','B','A','B','C') === matching(p)(input)) }
+    checkAll("AABABABC") { input => assert(ss('A','A','B','A','B','A','B','C') === matching(p)(input)) }
+    // Not matching
+    checkAll("ABC") { input => assert(Failure === matching(p)(input)) }
+  }
+
+  "Nested patterns" should "be supported at an arbitrary depth" in {
+    val p = elt('A') ~> many(elt('X') | (elt('Y') | elt('Z'))) ~> elt('C')
+    // Matching
+    checkAll("AC") { input => assert(ss('A','C') === matching(p)(input)) }
+    checkAll("AXXC") { input => assert(ss('A','X','X','C') === matching(p)(input)) }
+    checkAll("AXZYC") { input => assert(ss('A','X','Z','Y','C') === matching(p)(input)) }
+    checkAll("AXXYYZZC") { input => assert(ss('A','X','X','Y','Y','Z','Z','C') === matching(p)(input)) }
     // Not matching
     assert(Failure === matching(p)("ABC".toStream))
+    assert(Failure === matching(p)("AXYZXYZXYZBC".toStream))
   }
 
   "Matching a sliding pattern from a the start of a stream" should "be possible" in {
     val p = many(elt('A')) ~> elt('B') ~> elt('C')
     // Matching
     checkAll("BC") { input => assert(ss('B','C') === matching(p)(input.toStream)) }
-    assert(ss('A','B','C') ++ ss('B','C') === matching(p)("ABC".toStream))
-    assert(ss('A','A','B','C') ++ ss('A','B','C') ++ ss('B','C') === matching(p)("AABC".toStream))
-    assert(ss('A','A','A','A','B','C') ++ ss('A','A','A','B','C') ++ ss('A','A','B','C') ++ ss('A','B','C') ++ ss('B','C') === matching(p)("AAAABC".toStream))
+    checkAll("ABC") { input => assert(ss('A','B','C') ++ ss('B','C') === matching(p)(input)) }
+    checkAll("AABC") { input => assert(ss('A','A','B','C') ++ ss('A','B','C') ++ ss('B','C') === matching(p)(input)) }
+    checkAll("AAAABC") { input => assert(ss('A','A','A','A','B','C') ++ ss('A','A','A','B','C') ++ ss('A','A','B','C') ++ ss('A','B','C') ++ ss('B','C') === matching(p)(input)) }
   }
 
 
-  // FIXME add tests to challenge grredy behaviour of many(), atMost and at Least()
-  // Will the matching be able to match against a pattern like this : "A(B*)BC" which is equivalent to "A(B+)C"
+  // FIXME add tests to challenge greedy behaviour of many(), atMost and at Least()
+  // - Will the matching be able to match against a pattern like this : "A(B*)BC" which is equivalent to "A(B+)C"
+  // - Patterns like "A.*B" should never match against the last B ?
 
   // Helpers
 

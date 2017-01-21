@@ -13,6 +13,7 @@ object Pattern {
   implicit class PatternOps[A](val pattern: Pattern[A]) { self =>
     def ~>(p: Pattern[A]): Pattern[A] = andThen(self,p)
     def |(p: Pattern[A]): Pattern[A] = or(self,p)
+    def *(n: Int): Pattern[A] = exactly(n,of=pattern)
   }
 
 
@@ -27,6 +28,9 @@ object Pattern {
       i.headOption.filter(p).map { h =>  (i.tail, acc.map(h::_)) } getOrElse (i,None)
 
   def elt[A](a: A) = eql[A](_==a)
+
+  // Wildcard for any element of A
+  def any[A] = eql[A](_ => true)
 
   def not[A](p: Pattern[A]) =
     (i: Input[A], acc: Matched[A]) =>
