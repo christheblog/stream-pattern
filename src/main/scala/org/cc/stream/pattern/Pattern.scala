@@ -1,7 +1,5 @@
 package org.cc.stream.pattern
 
-import scala.annotation.tailrec
-
 
 object Pattern {
 
@@ -52,6 +50,7 @@ object Pattern {
       else (r2, m2)
     }
 
+  // Greedy, matching 0 to an infinite number of occurences
   def many[A](p: Pattern[A]): Pattern[A] =
     (i: Input[A], acc: Matched[A]) => {
       val (remainder,matched) = p(i,acc)
@@ -64,27 +63,36 @@ object Pattern {
       if(n==0) (i,acc)
       else {
         val (remainder, matched) = of(i, acc)
-        if (matched.isEmpty) (i, acc)
+        if (matched.isEmpty) (i, None)
         else exactly(n-1, of)(remainder, matched)
       }
     }
 
-  def atLeast[A](n: Int, of: Pattern[A]) = ???
+  // A minimum of n occurences of the pattern
+  def atLeast[A](n: Int, of: Pattern[A]): Pattern[A] =
+    (i: Input[A], acc: Matched[A]) => {
+      // Using many to ensure greedy matching of n
+      val (remainder,matched) = many(of)(i,Some(List.empty[A]))
+      if(matched.exists(_.size >= n)) (remainder, for(m <- matched;prev<-acc) yield m ++ prev)
+      else (i,None)
+    }
 
-  def atMost[A](n: Int, of: Pattern[A]) = ???
+  // Between 0 and n occurences of the pattern
+  def atMost[A](n: Int, of: Pattern[A]): Pattern[A] =
+    (i: Input[A], acc: Matched[A]) => {
+      if(n==0) (i,acc)
+      else {
+        val (remainder, matched) = of(i, acc)
+        if (matched.isEmpty) (i, acc)
+        else atMost(n-1, of)(remainder, matched)
+      }
+    }
 
   // Matches a given pattern against an input stream
   def matching[A](p: Pattern[A])(against: Stream[A]): Stream[Matched[A]] = {
-    val (_, matched: Matched[A]) = p(against, Some(List.empty[A]))
-    (matched,against) match {
-      case (None,Stream.Empty) =>
-        Stream.Empty
-      case (None,_) =>
-        matching[A](p)(against.tail)
-      case (ms, Stream.Empty) =>
-        ms.map(_.reverse) #:: Stream.Empty
-      case (ms, _) =>
-        ms.map(_.reverse) #:: matching[A](p)(against.tail)
+    against.tails.foldRight(Stream.empty[Matched[A]]) { case (input,acc) =>
+      val (remainder, matched) = p(input, Some(List.empty[A]))
+        if(matched.isEmpty) acc else matched.map(_.reverse) #:: acc
     }
   }
 
