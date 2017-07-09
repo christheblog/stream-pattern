@@ -73,5 +73,4 @@ matched.foreach(println) // will output all possible match in a stream : AAAABC,
 ## Limitations
 
 - At the moment, the matching implementation doesn't work with infinite streams.
-<br>
 - The greedy implementation of the combinator `many()` make squences like `AB*BC` unmatchable. `ABB*C` would work.
