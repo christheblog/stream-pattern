@@ -5,8 +5,7 @@ import org.scalatest._
 class PatternTest extends FlatSpec {
 
   import Pattern._
-
-  val Failure = Stream.Empty
+  import TestHelper._
 
   "eql() combinator" should "describe any matching element" in {
     val p = eql(Set('A','Y','Z')) ~> elt('B') ~> elt('C')
@@ -115,23 +114,6 @@ class PatternTest extends FlatSpec {
     checkAll("ABC") { input => assert(ss('A','B','C') ++ ss('B','C') === matching(p)(input)) }
     checkAll("AABC") { input => assert(ss('A','A','B','C') ++ ss('A','B','C') ++ ss('B','C') === matching(p)(input)) }
     checkAll("AAAABC") { input => assert(ss('A','A','A','A','B','C') ++ ss('A','A','A','B','C') ++ ss('A','A','B','C') ++ ss('A','B','C') ++ ss('B','C') === matching(p)(input)) }
-  }
-
-
-  // FIXME add tests to challenge greedy behaviour of many(), atMost and at Least()
-  // - Will the matching be able to match against a pattern like this : "A(B*)BC" which is equivalent to "A(B+)C"
-  // - Patterns like "A.*B" should never match against the last B ?
-
-  // Helpers
-
-  def ss[A](a:A*) = Stream(Some(a.toList))
-
-  // Generates various combination of the input string
-  def checkAll(input: String)(f: (Stream[Char]) => Unit): Unit = {
-    f(input.toStream)        // just the input
-    f(("---"+input).toStream)  // at the end
-    f((input+"---").toStream)  // at the begining
-    f(("---" + input + "---").toStream) // in the middle
   }
 
 }

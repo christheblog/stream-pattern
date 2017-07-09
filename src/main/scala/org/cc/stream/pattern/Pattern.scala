@@ -93,6 +93,7 @@ object Pattern {
     }
 
   // Matches a given pattern against an input stream
+  // FIXME this implementation does NOT work with infinite streams
   def matching[A](p: Pattern[A])(against: Stream[A]): Stream[Matched[A]] = {
     against.tails.foldRight(Stream.empty[Matched[A]]) { case (input,acc) =>
       val (remainder, matched) = p(input, Some(List.empty[A]))
